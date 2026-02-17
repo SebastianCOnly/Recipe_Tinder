@@ -1,7 +1,8 @@
 //
 //  AuthenticationManager.swift
-//  Created by Stella K 
-//  Firebase Authentication service
+//  Recipe_Tinder
+//  Updated by Stella K 2/17/26
+//  FIXED: Updated for current Firebase Auth API
 //
 
 import Foundation
@@ -51,7 +52,6 @@ class AuthenticationManager: ObservableObject {
     private let db = Firestore.firestore()
     
     private init() {
-        // Listen for auth state changes
         auth.addStateDidChangeListener { [weak self] _, user in
             Task { @MainActor in
                 self?.currentUser = user
@@ -130,7 +130,6 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
-    
     func signOut() throws {
         do {
             try auth.signOut()
@@ -143,7 +142,6 @@ class AuthenticationManager: ObservableObject {
             throw AuthError.unknownError("Failed to sign out")
         }
     }
-    
     
     func resetPassword(email: String) async throws {
         guard !email.isEmpty else {
@@ -161,7 +159,6 @@ class AuthenticationManager: ObservableObject {
             throw mapAuthError(error)
         }
     }
-    
     
     func deleteAccount() async throws {
         guard let user = currentUser else {
@@ -197,7 +194,6 @@ class AuthenticationManager: ObservableObject {
         }
     }
     
-    
     private func createUserProfile(_ profile: UserProfile) async throws {
         try db.collection(UserProfile.collectionName)
             .document(profile.userId)
@@ -213,6 +209,7 @@ class AuthenticationManager: ObservableObject {
             if document.exists {
                 self.userProfile = try document.data(as: UserProfile.self)
             } else {
+                // Create default profile if doesn't exist
                 let profile = UserProfile(
                     userId: userId,
                     displayName: currentUser?.displayName,
@@ -238,13 +235,12 @@ class AuthenticationManager: ObservableObject {
         self.userProfile = profile
     }
     
-    
     private func mapAuthError(_ error: NSError) -> AuthError {
-        guard let errorCode = AuthErrorCode.Code(rawValue: error.code) else {
+        guard let code = AuthErrorCode(rawValue: error.code) else {
             return .unknownError(error.localizedDescription)
         }
         
-        switch errorCode {
+        switch code {
         case .invalidEmail:
             return .invalidEmail
         case .weakPassword:
