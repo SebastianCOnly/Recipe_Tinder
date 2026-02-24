@@ -3,7 +3,7 @@
 //  Recipe_Tinder
 //  Updated by Stella K 2/17/26
 //  FIXED: Updated for current Firebase Auth API
-//
+//  Updated 2/24/26
 
 import Foundation
 import FirebaseAuth
@@ -89,6 +89,14 @@ class AuthenticationManager: ObservableObject {
                 displayName: displayName,
                 email: email
             )
+
+            print("DEBUG AUTH: Creating profile: \(profile)")
+            try await createUserProfile(profile)
+
+            self.currentUser = result.user
+            self.userProfile = profile
+            print("DEBUG AUTH: Profile set. Cuisines: \(profile.preferredCuisines.count)")
+            print("DEBUG AUTH: isAuthenticated: \(self.isAuthenticated)")
             
             try await createUserProfile(profile)
             
