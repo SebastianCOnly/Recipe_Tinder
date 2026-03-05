@@ -6,6 +6,7 @@
 //  Root view that manages authentication state
 //
 //  UPDATED: Handles onboarding flow properly 2/24/26
+//  UPDATED: Fixed to prevent onboarding during account deletion 3/3/26
 //
 
 import SwiftUI
@@ -20,7 +21,7 @@ struct AuthenticationRootView: View {
             if authManager.isAuthenticated {
                 if isCheckingProfile {
                     ProgressView("Loading...")
-                } else if needsOnboarding && !hasCompletedOnboarding {
+                } else if needsOnboarding && !hasCompletedOnboarding && !authManager.isDeletingAccount {
                     OnboardingPreferencesView()
                         .environmentObject(authManager)
                         .onDisappear {
@@ -65,22 +66,17 @@ struct AuthenticationRootView: View {
     }
     
     private func checkProfile() {
-        print("DEBUG: Checking profile...")
-        
         Task {
             try? await Task.sleep(nanoseconds: 500_000_000)
             
             await MainActor.run {
                 if authManager.userProfile != nil {
                     isCheckingProfile = false
-                    print("DEBUG: Profile loaded. Needs onboarding: \(needsOnboarding)")
                 } else {
-                    
                     Task {
-                        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 more second
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
                         await MainActor.run {
                             isCheckingProfile = false
-                            print("DEBUG: Profile check complete. Needs onboarding: \(needsOnboarding)")
                         }
                     }
                 }
