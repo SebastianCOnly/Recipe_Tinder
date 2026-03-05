@@ -4,6 +4,8 @@
 //  Updated by Stella K 2/17/26
 //  FIXED: Updated for current Firebase Auth API
 //  Updated 2/24/26
+//  UPDATED: Fixed delete account flow to prevent onboarding loop
+//  updated 3/3/26
 
 import Foundation
 import FirebaseAuth
@@ -47,6 +49,7 @@ class AuthenticationManager: ObservableObject {
     @Published var isAuthenticated = false
     @Published var isLoading = false
     @Published var errorMessage: String?
+    @Published var isDeletingAccount = false
     
     private let auth = Auth.auth()
     private let db = Firestore.firestore()
@@ -57,13 +60,12 @@ class AuthenticationManager: ObservableObject {
                 self?.currentUser = user
                 self?.isAuthenticated = user != nil
                 
-                if let user = user {
+                if let user = user, !(self?.isDeletingAccount ?? false) {
                     await self?.loadUserProfile(userId: user.uid)
                 }
             }
         }
     }
-    
     
     func signUp(email: String, password: String, displayName: String) async throws {
         guard !email.isEmpty else {
@@ -78,39 +80,56 @@ class AuthenticationManager: ObservableObject {
         errorMessage = nil
         
         do {
+            print("🔥 SIGNUP: Creating Firebase Auth user...")
+            
             let result = try await auth.createUser(withEmail: email, password: password)
+            
+            print("✅ SIGNUP: Auth user created: \(result.user.uid)")
             
             let changeRequest = result.user.createProfileChangeRequest()
             changeRequest.displayName = displayName
             try await changeRequest.commitChanges()
             
+            print("✅ SIGNUP: Display name set")
+            
             let profile = UserProfile(
                 userId: result.user.uid,
                 displayName: displayName,
-                email: email
+                email: email,
+                preferredCuisines: [],
+                dietaryRestrictions: [],
+                healthPreferences: [],
+                dislikedIngredients: [],
+                savedRecipeIds: [],
+                dislikedRecipeIds: []
             )
-
-            print("DEBUG AUTH: Creating profile: \(profile)")
-            try await createUserProfile(profile)
-
-            self.currentUser = result.user
-            self.userProfile = profile
-            print("DEBUG AUTH: Profile set. Cuisines: \(profile.preferredCuisines.count)")
-            print("DEBUG AUTH: isAuthenticated: \(self.isAuthenticated)")
+            
+            print("📊 SIGNUP: Profile object created")
+            print("💾 SIGNUP: Saving to Firestore...")
             
             try await createUserProfile(profile)
             
+            print("✅ SIGNUP: Saved to Firestore")
+            
             self.currentUser = result.user
             self.userProfile = profile
+            
+            print("✅ SIGNUP: Local state set")
+            print("🔍 SIGNUP: userProfile is now: \(self.userProfile != nil ? "SET" : "NIL")")
+            
+            try await Task.sleep(nanoseconds: 2_000_000_000)
+            
+            print("✅ SIGNUP: Sign-up complete!")
             
             isLoading = false
             
         } catch let error as NSError {
+            print("❌ SIGNUP: Failed!")
+            print("   Error: \(error)")
             isLoading = false
             throw mapAuthError(error)
         }
     }
-    
     
     func signIn(email: String, password: String) async throws {
         guard !email.isEmpty else {
@@ -173,6 +192,7 @@ class AuthenticationManager: ObservableObject {
             throw AuthError.userNotFound
         }
         
+        isDeletingAccount = true
         isLoading = true
         
         do {
@@ -195,52 +215,144 @@ class AuthenticationManager: ObservableObject {
             self.isAuthenticated = false
             
             isLoading = false
+            isDeletingAccount = false
             
         } catch let error as NSError {
             isLoading = false
+            isDeletingAccount = false
             throw mapAuthError(error)
         }
     }
     
     private func createUserProfile(_ profile: UserProfile) async throws {
-        try db.collection(UserProfile.collectionName)
-            .document(profile.userId)
-            .setData(from: profile)
+        print("💾 CREATE: Creating user profile...")
+        print("   User ID: \(profile.userId)")
+        
+        do {
+            let encoder = Firestore.Encoder()
+            let data = try encoder.encode(profile)
+            
+            print("📊 CREATE: Encoded data keys: \(data.keys)")
+            
+            try await db.collection(UserProfile.collectionName)
+                .document(profile.userId)
+                .setData(data, merge: false)
+            
+            print("✅ CREATE: Profile created in Firestore")
+            
+            let doc = try await db.collection(UserProfile.collectionName)
+                .document(profile.userId)
+                .getDocument()
+            
+            if doc.exists {
+                print("✅ CREATE: Verified - document exists in Firestore")
+            } else {
+                print("❌ CREATE: WARNING - Document not found after creation!")
+            }
+            
+        } catch {
+            print("❌ CREATE: Failed to create profile!")
+            print("   Error: \(error)")
+            throw error
+        }
     }
     
     func loadUserProfile(userId: String) async {
-        do {
-            let document = try await db.collection(UserProfile.collectionName)
-                .document(userId)
-                .getDocument()
+        print("🔄 LOAD: Loading profile for \(userId)")
+        
+        for attempt in 1...3 {
+            print("🔄 LOAD: Attempt \(attempt) of 3")
             
-            if document.exists {
-                self.userProfile = try document.data(as: UserProfile.self)
-            } else {
-                // Create default profile if doesn't exist
-                let profile = UserProfile(
-                    userId: userId,
-                    displayName: currentUser?.displayName,
-                    email: currentUser?.email
-                )
-                try await createUserProfile(profile)
-                self.userProfile = profile
+            do {
+                let document = try await db.collection(UserProfile.collectionName)
+                    .document(userId)
+                    .getDocument()
+                
+                if document.exists {
+                    print("✅ LOAD: Document found!")
+                    
+                    let loadedProfile = try document.data(as: UserProfile.self)
+                    
+                    await MainActor.run {
+                        self.userProfile = loadedProfile
+                        print("✅ LOAD: Profile loaded successfully")
+                        print("   Cuisines: \(loadedProfile.preferredCuisines)")
+                    }
+                    
+                    return
+                    
+                } else {
+                    print("⚠️ LOAD: Document doesn't exist (attempt \(attempt))")
+                    
+                    if attempt < 3 {
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    } else {
+                        print("⚠️ LOAD: Creating default profile...")
+                        
+                        let profile = UserProfile(
+                            userId: userId,
+                            displayName: currentUser?.displayName,
+                            email: currentUser?.email
+                        )
+                        
+                        try await createUserProfile(profile)
+                        
+                        await MainActor.run {
+                            self.userProfile = profile
+                            print("✅ LOAD: Default profile created")
+                        }
+                    }
+                }
+                
+            } catch {
+                print("❌ LOAD: Error on attempt \(attempt): \(error)")
+                
+                if attempt < 3 {
+                    try? await Task.sleep(nanoseconds: 1_000_000_000)
+                } else {
+                    print("❌ LOAD: All attempts failed")
+                }
             }
-        } catch {
-            print("Error loading user profile: \(error.localizedDescription)")
         }
     }
     
     func updateUserProfile(_ profile: UserProfile) async throws {
+        print("🔥 UPDATE: updateUserProfile called")
+        
         guard let userId = currentUser?.uid else {
+            print("❌ UPDATE: No current user!")
             throw AuthError.userNotFound
         }
         
-        try db.collection(UserProfile.collectionName)
-            .document(userId)
-            .setData(from: profile)
+        print("✅ UPDATE: User ID: \(userId)")
+        print("📊 UPDATE: Preferences to save:")
+        print("   Cuisines: \(profile.preferredCuisines)")
+        print("   Dietary: \(profile.dietaryRestrictions)")
+        print("   Health: \(profile.healthPreferences)")
         
-        self.userProfile = profile
+        do {
+            let encoder = Firestore.Encoder()
+            let data = try encoder.encode(profile)
+            
+            print("💾 UPDATE: Writing to Firestore...")
+            
+            try await db.collection(UserProfile.collectionName)
+                .document(userId)
+                .setData(data, merge: true)
+            
+            print("✅ UPDATE: Firestore write successful!")
+            
+            await MainActor.run {
+                self.userProfile = profile
+                print("✅ UPDATE: Local profile updated")
+                print("🔍 UPDATE: Verification - cuisines: \(self.userProfile?.preferredCuisines ?? [])")
+            }
+            
+        } catch {
+            print("❌ UPDATE: Failed!")
+            print("   Error: \(error)")
+            throw error
+        }
     }
     
     private func mapAuthError(_ error: NSError) -> AuthError {
