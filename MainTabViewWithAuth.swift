@@ -1,8 +1,9 @@
+//
 //  MainTabView.swift
 //  Recipe_Tinder
 //
 //  Created by Sebastian C on 1/27/26
-//  Enhanced by Stella K on 2/10/26 - Added auth support and complete tabs
+//  Enhanced by Stella K on 1/29/26 - Added auth support and complete tabs
 //
 
 import SwiftUI
@@ -62,7 +63,7 @@ struct SearchView: View {
                 .background(Color(.systemGray6))
                 .cornerRadius(10)
                 .padding(.horizontal)
-            
+                
                 ScrollView {
                     VStack(alignment: .leading, spacing: 16) {
                         VStack(alignment: .leading, spacing: 8) {
@@ -173,7 +174,6 @@ struct SavedRecipesView: View {
                             .padding(.horizontal)
                         
                         Button {
-
                         } label: {
                             Text("Start Discovering")
                                 .fontWeight(.semibold)
@@ -196,7 +196,6 @@ struct SavedRecipeCard: View {
     
     var body: some View {
         HStack(spacing: 12) {
-
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color(.systemGray5))
                 .frame(width: 80, height: 80)
@@ -305,7 +304,7 @@ struct ProfileView: View {
                         Label("Health Preferences", systemImage: "heart.text.square")
                     }
                 }
-                
+            
                 Section("Settings") {
                     NavigationLink {
                         Text("Notifications")
