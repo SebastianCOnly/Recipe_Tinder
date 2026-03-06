@@ -2,19 +2,20 @@
 //  SignUpView.swift
 //  Created by Stella K on 2/17/26
 //  New user registration interface
-//
+//  UPDATED: Now shows onboarding after sign-up 2/24/26
 
 import SwiftUI
 
 struct SignUpView: View {
-    @Environment(\.dismiss) private var dismiss
     @StateObject private var authManager = AuthenticationManager.shared
+    @Environment(\.dismiss) private var dismiss
     
     @State private var displayName = ""
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
     @State private var errorMessage: String?
+    @State private var showingOnboarding = false
     
     var body: some View {
         NavigationStack {
@@ -24,13 +25,16 @@ struct SignUpView: View {
                 
                 ScrollView {
                     VStack(spacing: 24) {
+                        
                         headerView
+                        
                         signUpForm
+                        
+                        signInLink
                     }
                     .padding()
                 }
             }
-            .navigationTitle("Create Account")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarLeading) {
@@ -48,31 +52,34 @@ struct SignUpView: View {
     }
     
     private var headerView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "person.crop.circle.fill.badge.plus")
+        VStack(spacing: 16) {
+            Image(systemName: "fork.knife.circle.fill")
                 .font(.system(size: 60))
                 .foregroundStyle(.pink)
             
-            Text("Join Recipe Tinder")
-                .font(.title2)
+            Text("Create Account")
+                .font(.largeTitle)
                 .fontWeight(.bold)
             
-            Text("Start discovering amazing recipes")
+            Text("Join Recipe Tinder to discover your next favorite meal")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
-        .padding(.vertical, 20)
+        .padding(.top, 20)
+        .padding(.bottom, 20)
     }
     
     private var signUpForm: some View {
         VStack(spacing: 16) {
             VStack(alignment: .leading, spacing: 8) {
-                Text("Name")
+                Text("Display Name")
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                TextField("Your name", text: $displayName)
+                TextField("Enter your name", text: $displayName)
                     .textContentType(.name)
+                    .autocapitalization(.words)
                     .padding()
                     .background(Color(.systemBackground))
                     .cornerRadius(10)
@@ -83,36 +90,35 @@ struct SignUpView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                TextField("your@email.com", text: $email)
+                TextField("Enter your email", text: $email)
                     .textContentType(.emailAddress)
                     .autocapitalization(.none)
                     .keyboardType(.emailAddress)
                     .padding()
                     .background(Color(.systemBackground))
                     .cornerRadius(10)
-                
-                if !email.isEmpty && !authManager.isValidEmail(email) {
-                    Text("Please enter a valid email")
-                        .font(.caption)
-                        .foregroundColor(.red)
-                }
             }
-        
+            
             VStack(alignment: .leading, spacing: 8) {
                 Text("Password")
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                SecureField("At least 6 characters", text: $password)
+                SecureField("Create a password", text: $password)
                     .textContentType(.newPassword)
                     .padding()
                     .background(Color(.systemBackground))
                     .cornerRadius(10)
                 
-                if !password.isEmpty && !authManager.isValidPassword(password) {
-                    Text("Password must be at least 6 characters")
-                        .font(.caption)
-                        .foregroundColor(.red)
+                if !password.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: password.count >= 6 ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundColor(password.count >= 6 ? .green : .red)
+                            .font(.caption)
+                        Text("At least 6 characters")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             
@@ -121,16 +127,21 @@ struct SignUpView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                SecureField("Re-enter password", text: $confirmPassword)
+                SecureField("Confirm your password", text: $confirmPassword)
                     .textContentType(.newPassword)
                     .padding()
                     .background(Color(.systemBackground))
                     .cornerRadius(10)
                 
-                if !confirmPassword.isEmpty && password != confirmPassword {
-                    Text("Passwords don't match")
-                        .font(.caption)
-                        .foregroundColor(.red)
+                if !confirmPassword.isEmpty {
+                    HStack(spacing: 4) {
+                        Image(systemName: password == confirmPassword ? "checkmark.circle.fill" : "xmark.circle.fill")
+                            .foregroundColor(password == confirmPassword ? .green : .red)
+                            .font(.caption)
+                        Text(password == confirmPassword ? "Passwords match" : "Passwords don't match")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
                 }
             }
             
@@ -144,7 +155,7 @@ struct SignUpView: View {
                         ProgressView()
                             .tint(.white)
                     } else {
-                        Text("Create Account")
+                        Text("Sign Up")
                             .fontWeight(.semibold)
                     }
                 }
@@ -155,15 +166,31 @@ struct SignUpView: View {
                 .cornerRadius(10)
             }
             .disabled(!isFormValid || authManager.isLoading)
-            .padding(.top, 8)
         }
         .padding(.horizontal)
     }
     
+    private var signInLink: some View {
+        HStack {
+            Text("Already have an account?")
+                .foregroundColor(.secondary)
+            
+            Button {
+                dismiss()
+            } label: {
+                Text("Sign In")
+                    .fontWeight(.semibold)
+                    .foregroundColor(.pink)
+            }
+        }
+        .font(.subheadline)
+        .padding(.top, 16)
+    }
+    
     private var isFormValid: Bool {
         !displayName.isEmpty &&
-        authManager.isValidEmail(email) &&
-        authManager.isValidPassword(password) &&
+        !email.isEmpty &&
+        password.count >= 6 &&
         password == confirmPassword
     }
     
@@ -174,7 +201,7 @@ struct SignUpView: View {
                 password: password,
                 displayName: displayName
             )
-            dismiss()
+            
         } catch {
             errorMessage = error.localizedDescription
         }
