@@ -4,12 +4,15 @@
 //
 //  Model for user data and preferences
 //  Updated 2/24/26
+//  Updated 3/3/26
+//  COMPLETE FIX: Proper initialization with all preference fields
+//
 
 import Foundation
 import FirebaseFirestore
 
 struct UserProfile: Codable, Identifiable, Equatable {
-    @DocumentID var id: String?
+    var id: String
     let userId: String
     var displayName: String?
     var email: String?
@@ -26,6 +29,22 @@ struct UserProfile: Codable, Identifiable, Equatable {
     var createdAt: Date
     var lastActive: Date
     
+    enum CodingKeys: String, CodingKey {
+        case id
+        case userId
+        case displayName
+        case email
+        case preferredCuisines
+        case dietaryRestrictions
+        case healthPreferences
+        case dislikedIngredients
+        case savedRecipeIds
+        case dislikedRecipeIds
+        case notificationsEnabled
+        case createdAt
+        case lastActive
+    }
+    
     init(userId: String,
          displayName: String? = nil,
          email: String? = nil,
@@ -36,6 +55,7 @@ struct UserProfile: Codable, Identifiable, Equatable {
          savedRecipeIds: [String] = [],
          dislikedRecipeIds: [String] = [],
          notificationsEnabled: Bool = true) {
+        self.id = userId
         self.userId = userId
         self.displayName = displayName
         self.email = email
