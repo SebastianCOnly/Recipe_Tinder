@@ -7,21 +7,21 @@
 import Foundation
 
 struct Recipe: Identifiable, Codable, Hashable {
-    let id: String
-    let label: String
-    let image: String
-    let source: String
-    let url: String
-    let cuisineType: [String]
-    let mealType: [String]
-    let dishType: [String]
-    let ingredientLines: [String]
-    let calories: Double
-    let totalTime: Double
-    let dietLabels: [String]
-    let healthLabels: [String]
-    let yield: Int
-    
+    var id: String
+    var label: String
+    var image: String
+    var source: String
+    var url: String
+    var cuisineType: [String]
+    var mealType: [String]
+    var dishType: [String]
+    var ingredientLines: [String]
+    var calories: Double
+    var totalTime: Double
+    var dietLabels: [String]
+    var healthLabels: [String]
+    var yield: Int
+   
     var caloriesPerServing: Int {
         Int(calories / Double(yield))
     }
@@ -74,16 +74,13 @@ extension Recipe {
         image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=800",
         source: "Test Kitchen",
         url: "https://example.com",
-        cuisineType: ["indian"],
+        cuisineType: ["Indian"],
         mealType: ["dinner"],
         dishType: ["main course"],
         ingredientLines: [
             "2 lbs chicken breast",
             "1 cup yogurt",
-            "2 tbsp garam masala",
-            "1 can tomato sauce",
-            "1 cup heavy cream",
-            "Fresh cilantro"
+            "2 tbsp garam masala"
         ],
         calories: 1800,
         totalTime: 45,
@@ -91,46 +88,4 @@ extension Recipe {
         healthLabels: ["Gluten-Free"],
         yield: 4
     )
-    
-    static let mockRecipes: [Recipe] = [
-        mockRecipe,
-        Recipe(
-            label: "Spaghetti Carbonara",
-            image: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=800",
-            source: "Italian Classics",
-            url: "https://example.com",
-            cuisineType: ["italian"],
-            mealType: ["dinner"],
-            dishType: ["main course"],
-            ingredientLines: [
-                "1 lb spaghetti",
-                "4 eggs",
-                "1 cup parmesan cheese",
-                "8 oz pancetta",
-                "Black pepper"
-            ],
-            calories: 2080,
-            totalTime: 30,
-            yield: 4
-        ),
-        Recipe(
-            label: "Caesar Salad",
-            image: "https://images.unsplash.com/photo-1546793665-c74683f339c1?w=800",
-            source: "Fresh Eats",
-            url: "https://example.com",
-            cuisineType: ["american"],
-            mealType: ["lunch"],
-            dishType: ["salad"],
-            ingredientLines: [
-                "1 head romaine lettuce",
-                "1/2 cup caesar dressing",
-                "1/2 cup croutons",
-                "1/4 cup parmesan cheese"
-            ],
-            calories: 1120,
-            totalTime: 15,
-            healthLabels: ["Vegetarian"],
-            yield: 4
-        )
-    ]
 }
