@@ -1,5 +1,8 @@
+//
 //  ForgotPasswordView.swift
-//  Created by Stella K on 2/10/26
+//  Recipe_Tinder
+//
+//  Created by Stella K on 2/12/26
 //  Password reset interface
 //
 
@@ -20,6 +23,7 @@ struct ForgotPasswordView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 24) {
+                    // Header
                     VStack(spacing: 16) {
                         Image(systemName: "lock.rotation")
                             .font(.system(size: 60))
@@ -37,6 +41,7 @@ struct ForgotPasswordView: View {
                     }
                     .padding(.top, 40)
                     
+                    // Email Input
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Email")
                             .font(.subheadline)
@@ -52,6 +57,7 @@ struct ForgotPasswordView: View {
                     }
                     .padding(.horizontal)
                     
+                    // Reset Button
                     Button {
                         Task {
                             await resetPassword()
@@ -100,7 +106,6 @@ struct ForgotPasswordView: View {
             }
         }
     }
-    
     
     private func resetPassword() async {
         do {
